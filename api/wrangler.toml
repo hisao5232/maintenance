@@ -1,0 +1,14 @@
+name = "maintenance-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "maintenance-db"
+database_id = "736b090b-05f3-4330-aa7f-7c69bf309c61"
+
+# ローカル開発用の環境変数
+[vars]
+USERNAME = "admin"         # 好きなIDに変更してください
+PASSWORD = "password123"   # 好きなパスワードに変更してください
+JWT_SECRET = "your-secret-key-change-this"  # ランダムな文字列に変更

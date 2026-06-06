@@ -1,0 +1,17 @@
+# Dependencies
+api/node_modules/
+web/node_modules/
+
+# Cloudflare
+api/.wrangler/
+
+# Next.js
+web/.next/
+web/.env.local
+
+# 環境変数
+.env
+.env.local
+
+# DBの実データ
+api/seed.sql
