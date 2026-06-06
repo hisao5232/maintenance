@@ -1,4 +1,5 @@
-// web/proxy.ts
+export const runtime = 'edge'  // Cloudflare Pages用にEdge Runtimeを指定
+
 import { NextRequest, NextResponse } from "next/server"
 
 export function proxy(request: NextRequest) {
