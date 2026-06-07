@@ -1,0 +1,121 @@
+/* login.module.css */
+.page {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.icon {
+  width: 48px;
+  height: 48px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--accent),
+    var(--accent) 5px,
+    #0a0a0a 5px,
+    #0a0a0a 10px
+  );
+  border: 2px solid var(--accent);
+  margin: 0 auto 20px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: 0.25em;
+  margin-bottom: 8px;
+}
+
+.access {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 28px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.2em;
+}
+
+.input {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.error {
+  font-size: 11px;
+  color: var(--danger);
+  letter-spacing: 0.05em;
+}
+
+.btn {
+  background: var(--accent);
+  color: #0a0a0a;
+  border: none;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 4px;
+}
+
+.btn:hover {
+  background: var(--accent-hover);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

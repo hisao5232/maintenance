@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import styles from "./login.module.css"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -16,72 +17,46 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
-
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       })
-
-      if (!res.ok) {
-        setError("IDまたはパスワードが違います")
-        return
-      }
-
+      if (!res.ok) { setError("// AUTH FAILED: INVALID CREDENTIALS"); return }
       const { token } = await res.json()
-
-      // JWTをCookieに保存（24時間）
       document.cookie = `token=${token}; path=/; max-age=${60 * 60 * 24}; SameSite=Strict`
-
       router.push("/")
     } catch {
-      setError("ログインに失敗しました")
+      setError("// ERROR: CONNECTION FAILED")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white rounded-lg shadow p-8 w-full max-w-sm space-y-6">
-        <h1 className="text-xl font-bold text-center text-gray-800">整備記録システム</h1>
+    <div className={styles.page}>
+      <div className={styles.box}>
+        <div className={styles.icon} />
+        <h1 className={styles.title}>HEAVY EQUIPMENT</h1>
+        <p className={styles.subtitle}>SERVICE LOG SYSTEM</p>
+        <p className={styles.access}>// AUTHORIZED ACCESS ONLY</p>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">ID</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="border rounded px-3 py-2 w-full text-sm"
-              placeholder="ユーザーID"
-            />
+        <form onSubmit={handleLogin} className={styles.form}>
+          <div className={styles.field}>
+            <label className={styles.label}>USER_ID</label>
+            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className={styles.input} placeholder="ENTER ID" />
           </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">パスワード</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="border rounded px-3 py-2 w-full text-sm"
-              placeholder="パスワード"
-            />
+          <div className={styles.field}>
+            <label className={styles.label}>PASSWORD</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className={styles.input} placeholder="••••••••" />
           </div>
-
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="bg-blue-600 text-white w-full py-2 rounded text-sm disabled:opacity-50"
-          >
-            {isLoading ? "ログイン中..." : "ログイン"}
+          {error && <p className={styles.error}>{error}</p>}
+          <button type="submit" disabled={isLoading} className={styles.btn}>
+            {isLoading ? "AUTHENTICATING..." : "[ AUTHENTICATE ]"}
           </button>
         </form>
       </div>
-    </main>
+    </div>
   )
 }

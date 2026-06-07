@@ -1,9 +1,12 @@
+// layout.tsx
 import type { Metadata } from "next"
 import "./globals.css"
+import Header from "./components/Header"
+import Footer from "./components/Footer"
 
 export const metadata: Metadata = {
-  title: "整備記録システム",
-  description: "重機整備記録の検索・登録",
+  title: "Heavy Equipment Service Log",
+  description: "Maintenance Record System",
 }
 
 export default function RootLayout({
@@ -13,8 +16,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body className="bg-gray-50 min-h-screen">
-        {children}
+      <body>
+        <Header />
+        <main style={{ flex: 1 }}>
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   )
