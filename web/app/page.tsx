@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 
 // 整備記録の型定義
 type Record = {
@@ -15,6 +16,19 @@ type Record = {
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function HomePage() {
+  const router = useRouter()
+  // トークンがなければログインページへリダイレクト
+  useEffect(() => {
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("token="))
+      ?.split("=")[1]
+
+    if (!token) {
+      router.replace("/login")
+    }
+  }, [router])
+
   // 検索関連のstate
   const [query, setQuery]       = useState("")
   const [category, setCategory] = useState("")
