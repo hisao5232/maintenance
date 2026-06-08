@@ -32,7 +32,7 @@
 }
 
 .title {
-  font-size: 20px;
+  font-size: 22px;        /* 大きく */
   font-weight: 700;
   color: var(--accent);
   letter-spacing: 0.2em;
@@ -40,34 +40,21 @@
 }
 
 .subtitle {
-  font-size: 12px;
+  font-size: 13px;        /* 大きく */
   color: var(--text-secondary);
   letter-spacing: 0.25em;
   margin-bottom: 8px;
 }
 
 .access {
-  font-size: 11px;
+  font-size: 12px;        /* 大きく */
   color: var(--text-muted);
   letter-spacing: 0.1em;
   margin-bottom: 28px;
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  text-align: left;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
 .label {
-  font-size: 10px;
+  font-size: 11px;        /* 大きく */
   color: var(--text-muted);
   letter-spacing: 0.2em;
 }
@@ -76,11 +63,12 @@
   background: var(--bg-tertiary);
   border: 1px solid var(--border-light);
   color: var(--text-primary);
-  padding: 10px 12px;
+  padding: 12px 14px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 15px;        /* 大きく */
   outline: none;
   transition: border-color 0.2s;
+  width: 100%;
 }
 
 .input:focus {
@@ -92,7 +80,7 @@
 }
 
 .error {
-  font-size: 11px;
+  font-size: 12px;        /* 大きく */
   color: var(--danger);
   letter-spacing: 0.05em;
 }
@@ -101,14 +89,15 @@
   background: var(--accent);
   color: #0a0a0a;
   border: none;
-  padding: 12px;
+  padding: 14px;          /* 少し大きく */
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;        /* 大きく */
   font-weight: 700;
   letter-spacing: 0.15em;
   cursor: pointer;
   transition: background 0.2s;
   margin-top: 4px;
+  width: 100%;
 }
 
 .btn:hover {

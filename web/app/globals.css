@@ -1,13 +1,12 @@
-/* globals.css */
 /* ベースカラー変数定義 */
 :root {
-  --bg-primary: #0a0a0a;       /* メイン背景：ほぼ黒 */
-  --bg-secondary: #141414;     /* カード背景 */
-  --bg-tertiary: #1e1e1e;      /* 入力欄背景 */
-  --border: #2a2a2a;           /* ボーダー */
-  --border-light: #333333;
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #141414;
+  --bg-tertiary: #252525;      /* 少し明るく（元: #1e1e1e） */
+  --border: #2a2a2a;
+  --border-light: #3a3a3a;     /* 少し明るく（元: #333333） */
 
-  --accent: #f59e0b;           /* オレンジ（重機カラー） */
+  --accent: #f59e0b;
   --accent-hover: #d97706;
   --accent-dim: rgba(245, 158, 11, 0.15);
 
@@ -29,7 +28,8 @@
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Courier New', 'Consolas', monospace; /* 武骨なモノスペースフォント */
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-weight: 600;        /* 追加：全体的に太く */
   min-height: 100vh;
   display: flex;
   flex-direction: column;

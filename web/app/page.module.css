@@ -2,7 +2,7 @@
 .page {
   max-width: 900px;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -20,7 +20,7 @@
 }
 
 .sectionLabel {
-  font-size: 11px;
+  font-size: 12px;        /* 大きく */
   color: var(--accent);
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -38,9 +38,9 @@
   background: var(--bg-tertiary);
   border: 1px solid var(--border-light);
   color: var(--text-primary);
-  padding: 10px 12px;
+  padding: 10px 14px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;        /* 大きく */
   flex: 1;
   min-width: 160px;
   outline: none;
@@ -60,9 +60,9 @@
   background: var(--bg-tertiary);
   border: 1px solid var(--border-light);
   color: var(--text-primary);
-  padding: 10px 12px;
+  padding: 10px 14px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;        /* 大きく */
   outline: none;
   cursor: pointer;
 }
@@ -75,13 +75,13 @@
   background: var(--bg-tertiary);
   border: 1px solid var(--border-light);
   color: var(--text-primary);
-  padding: 12px;
+  padding: 12px 14px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 14px;        /* 大きく */
   width: 100%;
   resize: vertical;
   outline: none;
-  line-height: 1.6;
+  line-height: 1.7;
   transition: border-color 0.2s;
 }
 
@@ -100,7 +100,7 @@
   border: none;
   padding: 10px 20px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;        /* 大きく */
   font-weight: 700;
   letter-spacing: 0.1em;
   cursor: pointer;
@@ -126,14 +126,14 @@
 }
 
 .resultCount {
-  font-size: 11px;
+  font-size: 12px;        /* 大きく */
   color: var(--accent);
   letter-spacing: 0.15em;
   margin-bottom: 4px;
 }
 
 .noResult {
-  font-size: 12px;
+  font-size: 13px;        /* 大きく */
   color: var(--text-muted);
   letter-spacing: 0.1em;
   padding: 16px 0;
@@ -153,16 +153,17 @@
 .cardHeader {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 8px;
-  flex-wrap: wrap;
+  flex-wrap: wrap;        /* スマホで折り返し */
 }
 
 .badge {
-  font-size: 10px;
+  font-size: 11px;        /* 大きく */
   font-weight: 700;
   padding: 2px 8px;
   letter-spacing: 0.1em;
+  white-space: nowrap;
 }
 
 .badgeBlue {
@@ -179,28 +180,28 @@
 
 .modelName {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;        /* 大きく */
   color: var(--text-primary);
   letter-spacing: 0.05em;
 }
 
 .serial {
-  font-size: 11px;
+  font-size: 12px;        /* 大きく */
   color: var(--text-muted);
   letter-spacing: 0.05em;
 }
 
 .date {
-  font-size: 11px;
+  font-size: 12px;        /* 大きく */
   color: var(--text-secondary);
   margin-left: auto;
   letter-spacing: 0.05em;
 }
 
 .content {
-  font-size: 13px;
+  font-size: 14px;        /* 大きく */
   color: var(--text-secondary);
-  line-height: 1.7;
+  line-height: 1.8;
   white-space: pre-wrap;
   border-left: 2px solid var(--border);
   padding-left: 12px;
@@ -212,7 +213,7 @@
   border: none;
   color: var(--accent);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 12px;        /* 大きく */
   letter-spacing: 0.2em;
   cursor: pointer;
   padding: 0;
@@ -233,7 +234,7 @@
 .formRow {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: wrap;        /* スマホで折り返し */
 }
 
 .formFooter {
@@ -244,13 +245,44 @@
 }
 
 .msgSuccess {
-  font-size: 12px;
+  font-size: 13px;        /* 大きく */
   color: var(--success);
   letter-spacing: 0.05em;
 }
 
 .msgError {
-  font-size: 12px;
+  font-size: 13px;        /* 大きく */
   color: var(--danger);
   letter-spacing: 0.05em;
+}
+
+/* スマホ対応 */
+@media (max-width: 600px) {
+  .page {
+    padding: 12px;
+  }
+
+  .section {
+    padding: 14px;
+  }
+
+  /* 検索ボタンを全幅に */
+  .btnPrimary {
+    width: 100%;
+  }
+
+  /* selectを全幅に */
+  .select {
+    width: 100%;
+  }
+
+  /* 日付もフォームも全幅 */
+  .input {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .date {
+    margin-left: 0;     /* スマホではdateを右寄せしない */
+  }
 }
