@@ -286,3 +286,78 @@
     margin-left: 0;     /* スマホではdateを右寄せしない */
   }
 }
+
+/* モーダル */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.7);
+  animation: fadeIn 0.15s ease;
+}
+
+.modalBox {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  padding: 32px 40px;
+  text-align: center;
+  min-width: 280px;
+}
+
+.modalStatus {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.modalStatusOk {
+  color: var(--success);
+}
+
+.modalStatusError {
+  color: var(--danger);
+}
+
+.modalMessage {
+  font-size: 13px;
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+
+.modalDetail {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.modalProgress {
+  height: 3px;
+  background: var(--border);
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.modalProgressBar {
+  height: 100%;
+  background: var(--accent);
+  animation: progress 2s linear forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes progress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}

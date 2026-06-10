@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import styles from "./page.module.css"
 
@@ -41,6 +41,12 @@ export default function HomePage() {
     serial_number: "",
     content: "",
   })
+  const [modal, setModal] = useState<{
+    show: boolean
+    status: number | null
+    ok: boolean
+    message: string
+  } | null>(null)
 
   const getToken = () =>
     document.cookie.split("; ").find((r) => r.startsWith("token="))?.split("=")[1] ?? ""
@@ -68,7 +74,7 @@ export default function HomePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
-    setSaveMessage("")
+
     try {
       const res = await fetch(`${API_URL}/api/records`, {
         method: "POST",
@@ -78,15 +84,30 @@ export default function HomePage() {
         },
         body: JSON.stringify({ ...form, serial_number: form.serial_number || null }),
       })
+
+      // モーダルを表示（ステータスコード・成功可否）
+      setModal({
+        show: true,
+        status: res.status,
+        ok: res.ok,
+        message: res.ok ? "RECORD SAVED TO DATABASE" : "FAILED TO SAVE RECORD",
+      })
+
       if (res.ok) {
-        setSaveMessage("// RECORD SAVED SUCCESSFULLY")
         setForm({ category: "整備系", date: "", model_name: "", serial_number: "", content: "" })
-        await handleSearch()
-      } else {
-        setSaveMessage("// ERROR: FAILED TO SAVE")
       }
+
+      // 1秒後にモーダルを閉じる
+      setTimeout(() => setModal(null), 2000)
+
     } catch {
-      setSaveMessage("// ERROR: CONNECTION FAILED")
+      setModal({
+        show: true,
+        status: null,
+        ok: false,
+        message: "CONNECTION FAILED",
+      })
+      setTimeout(() => setModal(null), 2000)
     } finally {
       setIsSaving(false)
     }
@@ -94,6 +115,30 @@ export default function HomePage() {
 
   return (
     <div className={styles.page}>
+
+      {/* モーダル */}
+      {modal?.show && (
+        <div className={styles.modal}>
+          <div className={styles.modalBox}>
+            {/* ステータスコード */}
+            <div className={`${styles.modalStatus} ${modal.ok ? styles.modalStatusOk : styles.modalStatusError}`}>
+              {modal.status ?? "ERR"}
+            </div>
+            {/* メッセージ */}
+            <div className={styles.modalMessage}>
+              {modal.message}
+            </div>
+            {/* タイムスタンプ */}
+            <div className={styles.modalDetail}>
+              {new Date().toLocaleTimeString("ja-JP")} — DB WRITE {modal.ok ? "SUCCESS" : "FAILED"}
+            </div>
+            {/* プログレスバー */}
+            <div className={styles.modalProgress}>
+              <div className={styles.modalProgressBar} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 検索セクション */}
       <section className={styles.section}>
