@@ -59,6 +59,18 @@ export default function HomePage() {
   // 画像モーダル用
   const [imageModal, setImageModal] = useState<string | null>(null)
 
+  // 編集モーダル用
+  const [editTarget, setEditTarget] = useState<{
+    id: number
+    category: string
+    date: string
+    model_name: string
+    serial_number: string
+    content: string
+    image_url: string | null
+  } | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
+
   const getToken = () =>
     document.cookie.split("; ").find((r) => r.startsWith("token="))?.split("=")[1] ?? ""
 
@@ -82,6 +94,13 @@ export default function HomePage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => setForm({ ...form, [e.target.name]: e.target.value })
 
+  // 編集フォーム変更
+  const handleEditChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    if (!editTarget) return
+    setEditTarget({ ...editTarget, [e.target.name]: e.target.value })
+  }
   // 画像選択
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
@@ -184,6 +203,43 @@ export default function HomePage() {
     }
   }
 
+  // 更新実行
+  const handleUpdate = async () => {
+    if (!editTarget) return
+    setIsUpdating(true)
+    try {
+      const res = await fetch(`${API_URL}/api/records/${editTarget.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({
+          category: editTarget.category,
+          date: editTarget.date,
+          model_name: editTarget.model_name,
+          serial_number: editTarget.serial_number || null,
+          content: editTarget.content,
+        }),
+      })
+      if (res.ok) {
+        // 検索結果をその場で更新
+        setResults((prev) =>
+          prev.map((r) =>
+            r.id === editTarget.id
+              ? { ...r, ...editTarget, serial_number: editTarget.serial_number || null }
+              : r
+          )
+        )
+        setEditTarget(null)
+      }
+    } catch {
+      // エラーは無視
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   return (
     <div className={styles.page}>
 
@@ -238,6 +294,77 @@ export default function HomePage() {
               >
                 [ CANCEL ]
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 編集モーダル */}
+      {editTarget && (
+        <div className={styles.modal} onClick={() => setEditTarget(null)}>
+          <div className={styles.editModalBox} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.editModalHeader}>
+              // EDIT RECORD — ID: {editTarget.id}
+            </div>
+            <div className={styles.editForm}>
+              <div className={styles.formRow}>
+                <select
+                  name="category"
+                  value={editTarget.category}
+                  onChange={handleEditChange}
+                  className={styles.select}
+                >
+                  <option value="整備系">整備系</option>
+                  <option value="マニュアル系">マニュアル系</option>
+                </select>
+                <input
+                  name="date"
+                  type="date"
+                  value={editTarget.date}
+                  onChange={handleEditChange}
+                  className={styles.input}
+                />
+              </div>
+              <div className={styles.formRow}>
+                <input
+                  name="model_name"
+                  type="text"
+                  value={editTarget.model_name}
+                  onChange={handleEditChange}
+                  placeholder="MODEL NAME"
+                  className={styles.input}
+                />
+                <input
+                  name="serial_number"
+                  type="text"
+                  value={editTarget.serial_number ?? ""}
+                  onChange={handleEditChange}
+                  placeholder="SERIAL NO. (OPTIONAL)"
+                  className={styles.input}
+                />
+              </div>
+              <textarea
+                name="content"
+                value={editTarget.content}
+                onChange={handleEditChange}
+                rows={6}
+                className={styles.textarea}
+              />
+              <div className={styles.deleteButtons}>
+                <button
+                  onClick={handleUpdate}
+                  disabled={isUpdating}
+                  className={styles.editBtnConfirm}
+                >
+                  {isUpdating ? "SAVING..." : "[ SAVE ]"}
+                </button>
+                <button
+                  onClick={() => setEditTarget(null)}
+                  className={styles.deleteBtnCancel}
+                >
+                  [ CANCEL ]
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -329,8 +456,24 @@ export default function HomePage() {
                         />
                       </div>
                     )}
-                    {/* 削除ボタン */}
                     <div className={styles.cardFooter}>
+                      {/* 編集ボタン */}
+                      <button
+                        onClick={() => setEditTarget({
+                          id: r.id,
+                          category: r.category,
+                          date: r.date,
+                          model_name: r.model_name,
+                          serial_number: r.serial_number ?? "",
+                          content: r.content,
+                          image_url: r.image_url,
+                        })}
+                        className={styles.editBtn}
+                        title="編集"
+                      >
+                        ✏️
+                      </button>
+                      {/* 削除ボタン */}
                       <button
                         onClick={() => setDeleteTarget({ id: r.id, model_name: r.model_name })}
                         className={styles.deleteBtn}
@@ -384,7 +527,6 @@ export default function HomePage() {
                 <input
                   type="file"
                   accept="image/*"          // 画像ファイルのみ
-                  capture="environment"     // スマホでカメラを起動
                   onChange={handleImageChange}
                   className={styles.imageInput}
                 />
