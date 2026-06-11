@@ -7,6 +7,7 @@ type Bindings = {
   USERNAME: string   // 環境変数（wrangler.tomlで設定）
   PASSWORD: string   // 環境変数
   JWT_SECRET: string // 環境変数
+  IMAGES: R2Bucket // 画像保存用R2バケット
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -58,12 +59,13 @@ app.post("/auth/login", async (c) => {
 })
 
 // 以下のルートは認証が必要
-app.use("/api/*", authMiddleware)
+app.use("/api/records*", authMiddleware)  // レコードのみ認証必要
+app.use("/api/images", authMiddleware)    // アップロードは認証必要
 
 // --- 全件取得 ---
 app.get("/api/records", async (c) => {
   const { results } = await c.env.DB
-    .prepare("SELECT id, category, date, model_name, serial_number, content FROM maintenance_records ORDER BY date DESC")
+    .prepare("SELECT id, category, date, model_name, serial_number, content, image_url FROM maintenance_records ORDER BY date DESC")
     .all()
   return c.json(results)
 })
@@ -73,7 +75,7 @@ app.get("/api/records/search", async (c) => {
   const q        = c.req.query("q") ?? ""
   const category = c.req.query("category") ?? ""
 
-  let sql = "SELECT id, category, date, model_name, serial_number, content FROM maintenance_records WHERE (model_name LIKE ? OR serial_number LIKE ? OR content LIKE ?)"
+  let sql = "SELECT id, category, date, model_name, serial_number, content, image_url FROM maintenance_records WHERE (model_name LIKE ? OR serial_number LIKE ? OR content LIKE ?)"
   let params: string[] = [`%${q}%`, `%${q}%`, `%${q}%`]
 
   if (category) {
@@ -100,14 +102,14 @@ app.get("/api/records/:id", async (c) => {
 app.post("/api/records", async (c) => {
   const body = await c.req.json<{
     category: string; date: string; model_name: string
-    serial_number?: string; content: string
+    serial_number?: string; content: string; image_url?: string
   }>()
   if (!body.category || !body.date || !body.model_name || !body.content) {
     return c.json({ error: "必須項目が不足しています" }, 400)
   }
   await c.env.DB
-    .prepare("INSERT INTO maintenance_records (category, date, model_name, serial_number, content) VALUES (?, ?, ?, ?, ?)")
-    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content)
+    .prepare("INSERT INTO maintenance_records (category, date, model_name, serial_number, content, image_url) VALUES (?, ?, ?, ?, ?, ?)")
+    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content, body.image_url ?? null)
     .run()
   return c.json({ success: true }, 201)
 })
@@ -117,11 +119,11 @@ app.put("/api/records/:id", async (c) => {
   const id   = c.req.param("id")
   const body = await c.req.json<{
     category: string; date: string; model_name: string
-    serial_number?: string; content: string
+    serial_number?: string; content: string; image_url?: string
   }>()
   await c.env.DB
-    .prepare("UPDATE maintenance_records SET category=?, date=?, model_name=?, serial_number=?, content=? WHERE id=?")
-    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content, id)
+    .prepare("UPDATE maintenance_records SET category=?, date=?, model_name=?, serial_number=?, content=?, image_url=? WHERE id=?")
+    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content, body.image_url ?? null, id)
     .run()
   return c.json({ success: true })
 })
@@ -132,6 +134,65 @@ app.delete("/api/records/:id", async (c) => {
   await c.env.DB
     .prepare("DELETE FROM maintenance_records WHERE id = ?")
     .bind(id).run()
+  return c.json({ success: true })
+})
+
+// --- 画像アップロード ---
+// POST /api/images
+app.post("/api/images", async (c) => {
+  const formData = await c.req.formData()
+  const file = formData.get("image") as File | null
+
+  if (!file) {
+    return c.json({ error: "画像ファイルがありません" }, 400)
+  }
+
+  // ファイルサイズチェック（10MB以下）
+  if (file.size > 10 * 1024 * 1024) {
+    return c.json({ error: "ファイルサイズは10MB以下にしてください" }, 400)
+  }
+
+  // 拡張子チェック
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+  if (!allowedTypes.includes(file.type)) {
+    return c.json({ error: "JPG/PNG/WEBP/GIFのみ対応しています" }, 400)
+  }
+
+  // ユニークなファイル名を生成（タイムスタンプ + ランダム）
+  const ext = file.name.split(".").pop() ?? "jpg"
+  const key = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+  // R2にアップロード
+  await c.env.IMAGES.put(key, file.stream(), {
+    httpMetadata: { contentType: file.type },
+  })
+
+  // 公開URLを返す（Workers経由で配信）
+  const url = `/api/images/${key}`
+  return c.json({ url }, 201)
+})
+
+// --- 画像取得 ---
+// GET /api/images/:key
+app.get("/api/images/:key", async (c) => {
+  const key = c.req.param("key")
+  const obj = await c.env.IMAGES.get(key)
+
+  if (!obj) return c.json({ error: "画像が見つかりません" }, 404)
+
+  // 画像をそのまま返す
+  const headers = new Headers()
+  headers.set("Content-Type", obj.httpMetadata?.contentType ?? "image/jpeg")
+  headers.set("Cache-Control", "public, max-age=31536000") // 1年キャッシュ
+
+  return new Response(obj.body, { headers })
+})
+
+// --- 画像削除 ---
+// DELETE /api/images/:key
+app.delete("/api/images/:key", async (c) => {
+  const key = c.req.param("key")
+  await c.env.IMAGES.delete(key)
   return c.json({ success: true })
 })
 

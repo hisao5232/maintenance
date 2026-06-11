@@ -11,6 +11,7 @@ type Record = {
   model_name: string
   serial_number: string | null
   content: string
+  image_url: string | null
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -47,6 +48,9 @@ export default function HomePage() {
     ok: boolean
     message: string
   } | null>(null)
+  // 画像関連
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   const getToken = () =>
     document.cookie.split("; ").find((r) => r.startsWith("token="))?.split("=")[1] ?? ""
@@ -71,21 +75,59 @@ export default function HomePage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => setForm({ ...form, [e.target.name]: e.target.value })
 
+  // 画像選択
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    setImageFile(file)
+
+    // プレビュー用にBase64変換
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => setImagePreview(reader.result as string)
+      reader.readAsDataURL(file)
+    } else {
+      setImagePreview(null)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
 
     try {
+      // 画像がある場合は先にR2にアップロード
+      let imageUrl: string | null = null
+      if (imageFile) {
+        const formData = new FormData()
+        formData.append("image", imageFile)
+
+        const imgRes = await fetch(`${API_URL}/api/images`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${getToken()}` },
+          body: formData,
+        })
+
+        if (imgRes.ok) {
+          const { url } = await imgRes.json()
+          // ローカルの相対パスを絶対URLに変換
+          imageUrl = `${API_URL}${url}`
+        }
+      }
+
+      // レコードをD1に保存
       const res = await fetch(`${API_URL}/api/records`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${getToken()}`,
         },
-        body: JSON.stringify({ ...form, serial_number: form.serial_number || null }),
+        body: JSON.stringify({
+          ...form,
+          serial_number: form.serial_number || null,
+          image_url: imageUrl,
+        }),
       })
 
-      // モーダルを表示（ステータスコード・成功可否）
       setModal({
         show: true,
         status: res.status,
@@ -95,9 +137,10 @@ export default function HomePage() {
 
       if (res.ok) {
         setForm({ category: "整備系", date: "", model_name: "", serial_number: "", content: "" })
+        setImageFile(null)
+        setImagePreview(null)
       }
 
-      // 1秒後にモーダルを閉じる
       setTimeout(() => setModal(null), 2000)
 
     } catch {
@@ -195,6 +238,17 @@ export default function HomePage() {
                       <span className={styles.date}>{r.date}</span>
                     </div>
                     <p className={styles.content}>{r.content}</p>
+                    {/* 画像表示 */}
+                    {r.image_url && (
+                      <div className={styles.cardImage}>
+                        <img
+                          src={r.image_url}
+                          alt={`${r.model_name}の整備画像`}
+                          className={styles.cardImg}
+                          onClick={() => window.open(r.image_url!, "_blank")}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </>
@@ -234,6 +288,35 @@ export default function HomePage() {
               rows={5}
               className={styles.textarea}
             />
+            {/* 画像選択 */}
+            <div className={styles.imageUpload}>
+              <label className={styles.imageLabel}>
+                <input
+                  type="file"
+                  accept="image/*"          // 画像ファイルのみ
+                  capture="environment"     // スマホでカメラを起動
+                  onChange={handleImageChange}
+                  className={styles.imageInput}
+                />
+                <span className={styles.imageLabelText}>
+                  {imageFile ? `📎 ${imageFile.name}` : "[ + ATTACH IMAGE ]"}
+                </span>
+              </label>
+
+              {/* プレビュー */}
+              {imagePreview && (
+                <div className={styles.imagePreview}>
+                  <img src={imagePreview} alt="preview" className={styles.previewImg} />
+                  <button
+                    type="button"
+                    onClick={() => { setImageFile(null); setImagePreview(null) }}
+                    className={styles.imageRemove}
+                  >
+                    [ REMOVE ]
+                  </button>
+                </div>
+              )}
+            </div>
             <div className={styles.formFooter}>
               <button type="submit" disabled={isSaving} className={styles.btnPrimary}>
                 {isSaving ? "SAVING..." : "[ SAVE RECORD ]"}

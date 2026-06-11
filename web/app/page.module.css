@@ -361,3 +361,82 @@
   from { width: 100%; }
   to   { width: 0%; }
 }
+
+/* 画像アップロード */
+.imageUpload {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.imageLabel {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.imageInput {
+  display: none;  /* 実際のinputは非表示 */
+}
+
+.imageLabelText {
+  display: inline-block;
+  background: transparent;
+  border: 1px dashed var(--border-light);
+  color: var(--accent);
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.imageLabelText:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.imagePreview {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.previewImg {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.imageRemove {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+}
+
+.imageRemove:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* カード内の画像 */
+.cardImage {
+  margin-top: 10px;
+}
+
+.cardImg {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.cardImg:hover {
+  border-color: var(--accent);
+}
