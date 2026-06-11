@@ -56,6 +56,9 @@ export default function HomePage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; model_name: string } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // 画像モーダル用
+  const [imageModal, setImageModal] = useState<string | null>(null)
+
   const getToken = () =>
     document.cookie.split("; ").find((r) => r.startsWith("token="))?.split("=")[1] ?? ""
 
@@ -240,6 +243,26 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* 画像モーダル */}
+      {imageModal && (
+        <div className={styles.modal} onClick={() => setImageModal(null)}>
+          <div className={styles.imageModalBox}>
+            <img
+              src={imageModal}
+              alt="整備画像"
+              className={styles.imageModalImg}
+              onClick={(e) => e.stopPropagation()} // 画像クリックで閉じないよう
+            />
+            <button
+              onClick={() => setImageModal(null)}
+              className={styles.imageModalClose}
+            >
+              [ CLOSE ]
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 検索セクション */}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
@@ -302,7 +325,7 @@ export default function HomePage() {
                           src={r.image_url}
                           alt={`${r.model_name}の整備画像`}
                           className={styles.cardImg}
-                          onClick={() => window.open(r.image_url!, "_blank")}
+                          onClick={() => setImageModal(r.image_url!)}
                         />
                       </div>
                     )}

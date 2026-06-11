@@ -511,3 +511,37 @@
   border-color: var(--text-primary);
   color: var(--text-primary);
 }
+
+/* 画像モーダル */
+.imageModalBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.imageModalImg {
+  max-width: 90vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border: 2px solid var(--accent);
+}
+
+.imageModalClose {
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  padding: 8px 24px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.imageModalClose:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
