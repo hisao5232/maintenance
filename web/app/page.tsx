@@ -52,6 +52,10 @@ export default function HomePage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
+  // 削除確認モーダル用
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; model_name: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   const getToken = () =>
     document.cookie.split("; ").find((r) => r.startsWith("token="))?.split("=")[1] ?? ""
 
@@ -156,6 +160,27 @@ export default function HomePage() {
     }
   }
 
+  // 削除実行
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`${API_URL}/api/records/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
+      if (res.ok) {
+        // 削除後に検索結果を更新
+        setResults((prev) => prev.filter((r) => r.id !== deleteTarget.id))
+      }
+    } catch {
+      // エラーは無視
+    } finally {
+      setIsDeleting(false)
+      setDeleteTarget(null)
+    }
+  }
+
   return (
     <div className={styles.page}>
 
@@ -178,6 +203,38 @@ export default function HomePage() {
             {/* プログレスバー */}
             <div className={styles.modalProgress}>
               <div className={styles.modalProgressBar} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 削除確認モーダル */}
+      {deleteTarget && (
+        <div className={styles.modal}>
+          <div className={styles.modalBox}>
+            <div className={`${styles.modalStatus} ${styles.modalStatusError}`}>
+              ⚠
+            </div>
+            <div className={styles.modalMessage}>
+              DELETE RECORD?
+            </div>
+            <div className={styles.modalDetail}>
+              {deleteTarget.model_name} — ID: {deleteTarget.id}
+            </div>
+            <div className={styles.deleteButtons}>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className={styles.deleteBtnConfirm}
+              >
+                {isDeleting ? "DELETING..." : "[ DELETE ]"}
+              </button>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className={styles.deleteBtnCancel}
+              >
+                [ CANCEL ]
+              </button>
             </div>
           </div>
         </div>
@@ -249,6 +306,16 @@ export default function HomePage() {
                         />
                       </div>
                     )}
+                    {/* 削除ボタン */}
+                    <div className={styles.cardFooter}>
+                      <button
+                        onClick={() => setDeleteTarget({ id: r.id, model_name: r.model_name })}
+                        className={styles.deleteBtn}
+                        title="削除"
+                      >
+                        🗑
+                      </button>
+                    </div>
                   </div>
                 ))}
               </>
