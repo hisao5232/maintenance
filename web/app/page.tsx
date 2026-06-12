@@ -37,7 +37,7 @@ export default function HomePage() {
   const [saveMessage, setSaveMessage] = useState("")
   const [form, setForm] = useState({
     category: "整備系",
-    date: "",
+    date: new Date().toISOString().split("T")[0],  // 今日の日付（YYYY-MM-DD形式）
     model_name: "",
     serial_number: "",
     content: "",
@@ -178,7 +178,7 @@ export default function HomePage() {
       })
 
       if (res.ok) {
-        setForm({ category: "整備系", date: "", model_name: "", serial_number: "", content: "" })
+        setForm({ category: "整備系", date: new Date().toISOString().split("T")[0], model_name: "", serial_number: "", content: "" })
         setImageFile(null)
         setImagePreview(null)
       }
