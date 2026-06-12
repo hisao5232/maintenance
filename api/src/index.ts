@@ -119,7 +119,7 @@ app.put("/api/records/:id", async (c) => {
   const id   = c.req.param("id")
   const body = await c.req.json<{
     category: string; date: string; model_name: string
-    serial_number?: string; content: string; image_url?: string
+    serial_number?: string; content: string; image_url?: string  // 追加
   }>()
   await c.env.DB
     .prepare("UPDATE maintenance_records SET category=?, date=?, model_name=?, serial_number=?, content=?, image_url=? WHERE id=?")

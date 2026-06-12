@@ -70,6 +70,8 @@ export default function HomePage() {
     image_url: string | null
   } | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [editImageFile, setEditImageFile] = useState<File | null>(null)
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
 
   const getToken = () =>
     document.cookie.split("; ").find((r) => r.startsWith("token="))?.split("=")[1] ?? ""
@@ -101,6 +103,20 @@ export default function HomePage() {
     if (!editTarget) return
     setEditTarget({ ...editTarget, [e.target.name]: e.target.value })
   }
+
+  // 編集モーダル用画像選択
+  const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    setEditImageFile(file)
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => setEditImagePreview(reader.result as string)
+      reader.readAsDataURL(file)
+    } else {
+      setEditImagePreview(null)
+    }
+  }
+
   // 画像選択
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
@@ -208,6 +224,22 @@ export default function HomePage() {
     if (!editTarget) return
     setIsUpdating(true)
     try {
+      // 新しい画像がある場合はR2にアップロード
+      let imageUrl = editTarget.image_url
+      if (editImageFile) {
+        const formData = new FormData()
+        formData.append("image", editImageFile)
+        const imgRes = await fetch(`${API_URL}/api/images`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${getToken()}` },
+          body: formData,
+        })
+        if (imgRes.ok) {
+          const { url } = await imgRes.json()
+          imageUrl = `${API_URL}${url}`
+        }
+      }
+
       const res = await fetch(`${API_URL}/api/records/${editTarget.id}`, {
         method: "PUT",
         headers: {
@@ -220,17 +252,21 @@ export default function HomePage() {
           model_name: editTarget.model_name,
           serial_number: editTarget.serial_number || null,
           content: editTarget.content,
+          image_url: imageUrl,
         }),
       })
+
       if (res.ok) {
-        // 検索結果をその場で更新
         setResults((prev) =>
           prev.map((r) =>
             r.id === editTarget.id
-              ? { ...r, ...editTarget, serial_number: editTarget.serial_number || null }
+              ? { ...r, ...editTarget, serial_number: editTarget.serial_number || null, image_url: imageUrl }
               : r
           )
         )
+        // 画像stateをリセット
+        setEditImageFile(null)
+        setEditImagePreview(null)
         setEditTarget(null)
       }
     } catch {
@@ -350,6 +386,47 @@ export default function HomePage() {
                 rows={6}
                 className={styles.textarea}
               />
+              {/* 画像アップロード */}
+              <div className={styles.imageUpload}>
+                {/* 既存画像の表示 */}
+                {editTarget.image_url && !editImagePreview && (
+                  <div className={styles.imagePreview}>
+                    <img src={editTarget.image_url} alt="現在の画像" className={styles.previewImg} />
+                    <button
+                      type="button"
+                      onClick={() => setEditTarget({ ...editTarget, image_url: null })}
+                      className={styles.imageRemove}
+                    >
+                      [ REMOVE ]
+                    </button>
+                  </div>
+                )}
+                {/* 新しい画像のプレビュー */}
+                {editImagePreview && (
+                  <div className={styles.imagePreview}>
+                    <img src={editImagePreview} alt="新しい画像" className={styles.previewImg} />
+                    <button
+                      type="button"
+                      onClick={() => { setEditImageFile(null); setEditImagePreview(null) }}
+                      className={styles.imageRemove}
+                    >
+                      [ REMOVE ]
+                    </button>
+                  </div>
+                )}
+                {/* 画像選択ボタン */}
+                <label className={styles.imageLabel}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditImageChange}
+                    className={styles.imageInput}
+                  />
+                  <span className={styles.imageLabelText}>
+                    {editImageFile ? `📎 ${editImageFile.name}` : "[ + CHANGE IMAGE ]"}
+                  </span>
+                </label>
+              </div>
               <div className={styles.deleteButtons}>
                 <button
                   onClick={handleUpdate}
