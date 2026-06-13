@@ -196,4 +196,38 @@ app.delete("/api/images/:key", async (c) => {
   return c.json({ success: true })
 })
 
+// --- ストレージ使用量 ---
+// GET /api/storage
+app.get("/api/storage", async (c) => {
+  // D1のレコード数とおおよそのサイズを取得
+  const countResult = await c.env.DB
+    .prepare("SELECT COUNT(*) as count FROM maintenance_records")
+    .first<{ count: number }>()
+
+  const sizeResult = await c.env.DB
+    .prepare("SELECT SUM(LENGTH(content) + LENGTH(COALESCE(model_name,'')) + LENGTH(COALESCE(serial_number,'')) + LENGTH(COALESCE(image_url,'')) + LENGTH(COALESCE(category,''))) as total_size FROM maintenance_records")
+    .first<{ total_size: number }>()
+
+  // R2のオブジェクト一覧からサイズを計算
+  const r2List = await c.env.IMAGES.list()
+  const r2Size = r2List.objects.reduce((acc, obj) => acc + obj.size, 0)
+
+  return c.json({
+    d1: {
+      records: countResult?.count ?? 0,
+      // D1の概算サイズ（バイト）
+      used_bytes: sizeResult?.total_size ?? 0,
+      // 無料枠: 5GB
+      limit_bytes: 5 * 1024 * 1024 * 1024,
+    },
+    r2: {
+      // R2の実際の使用サイズ（バイト）
+      used_bytes: r2Size,
+      // 無料枠: 10GB
+      limit_bytes: 10 * 1024 * 1024 * 1024,
+      object_count: r2List.objects.length,
+    },
+  })
+})
+
 export default app

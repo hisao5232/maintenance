@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import Header from "./components/Header"
 import Footer from "./components/Footer"
+import StorageBar from "./components/StorageBar"
 
 export const viewport: Viewport = {
   themeColor: "#f59e0b",  // ブラウザのテーマカラー（アドレスバーがオレンジに）
@@ -36,6 +37,7 @@ export default function RootLayout({
     <html lang="ja">
       <body>
         <Header />
+        <StorageBar />
         <main style={{ flex: 1 }}>
           {children}
         </main>
