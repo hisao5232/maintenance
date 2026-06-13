@@ -75,13 +75,23 @@ app.get("/api/records/search", async (c) => {
   const q        = c.req.query("q") ?? ""
   const category = c.req.query("category") ?? ""
 
-  let sql = "SELECT id, category, date, model_name, serial_number, content, image_url FROM maintenance_records WHERE (model_name LIKE ? OR serial_number LIKE ? OR content LIKE ?)"
-  let params: string[] = [`%${q}%`, `%${q}%`, `%${q}%`]
+  // スペースで分割して複数キーワードに（全角・半角スペース対応）
+  const keywords = q.trim().split(/[\s　]+/).filter(Boolean)
+
+  let sql = "SELECT id, category, date, model_name, serial_number, content, image_url FROM maintenance_records WHERE 1=1"
+  let params: string[] = []
+
+  // キーワードごとにAND条件を追加
+  for (const keyword of keywords) {
+    sql += " AND (model_name LIKE ? OR serial_number LIKE ? OR content LIKE ?)"
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
+  }
 
   if (category) {
     sql += " AND category = ?"
     params.push(category)
   }
+
   sql += " ORDER BY date DESC"
 
   const { results } = await c.env.DB.prepare(sql).bind(...params).all()
