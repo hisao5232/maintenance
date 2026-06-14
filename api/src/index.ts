@@ -112,14 +112,20 @@ app.get("/api/records/:id", async (c) => {
 app.post("/api/records", async (c) => {
   const body = await c.req.json<{
     category: string; date: string; model_name: string
-    serial_number?: string; content: string; image_url?: string
+    serial_number?: string; content: string; image_urls?: string[]  // 配列に変更
   }>()
   if (!body.category || !body.date || !body.model_name || !body.content) {
     return c.json({ error: "必須項目が不足しています" }, 400)
   }
+
+  // 配列をJSON文字列にして保存（空配列ならnull）
+  const imageUrlJson = body.image_urls && body.image_urls.length > 0
+    ? JSON.stringify(body.image_urls)
+    : null
+
   await c.env.DB
     .prepare("INSERT INTO maintenance_records (category, date, model_name, serial_number, content, image_url) VALUES (?, ?, ?, ?, ?, ?)")
-    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content, body.image_url ?? null)
+    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content, imageUrlJson)
     .run()
   return c.json({ success: true }, 201)
 })
@@ -129,11 +135,16 @@ app.put("/api/records/:id", async (c) => {
   const id   = c.req.param("id")
   const body = await c.req.json<{
     category: string; date: string; model_name: string
-    serial_number?: string; content: string; image_url?: string  // 追加
+    serial_number?: string; content: string; image_urls?: string[]
   }>()
+
+  const imageUrlJson = body.image_urls && body.image_urls.length > 0
+    ? JSON.stringify(body.image_urls)
+    : null
+
   await c.env.DB
     .prepare("UPDATE maintenance_records SET category=?, date=?, model_name=?, serial_number=?, content=?, image_url=? WHERE id=?")
-    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content, body.image_url ?? null, id)
+    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content, imageUrlJson, id)
     .run()
   return c.json({ success: true })
 })

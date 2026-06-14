@@ -14,6 +14,17 @@ type Record = {
   image_url: string | null
 }
 
+// JSON文字列を配列に変換するヘルパー
+const parseImages = (imageUrl: string | null): string[] => {
+  if (!imageUrl) return []
+  try {
+    const parsed = JSON.parse(imageUrl)
+    return Array.isArray(parsed) ? parsed : [imageUrl] // 旧データ(単一URL)にも対応
+  } catch {
+    return [imageUrl] // JSONでない＝旧データの単一URL
+  }
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export default function HomePage() {
@@ -48,9 +59,9 @@ export default function HomePage() {
     ok: boolean
     message: string
   } | null>(null)
-  // 画像関連
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  // 画像関連（複数対応・最大3枚）
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
 
   // 削除確認モーダル用
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; model_name: string } | null>(null)
@@ -67,11 +78,11 @@ export default function HomePage() {
     model_name: string
     serial_number: string
     content: string
-    image_url: string | null
+    image_urls: string[]
   } | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [editImageFile, setEditImageFile] = useState<File | null>(null)
-  const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
+  const [editImageFiles, setEditImageFiles] = useState<File[]>([])
+  const [editImagePreviews, setEditImagePreviews] = useState<string[]>([])
 
   const getToken = () =>
     document.cookie.split("; ").find((r) => r.startsWith("token="))?.split("=")[1] ?? ""
@@ -104,59 +115,84 @@ export default function HomePage() {
     setEditTarget({ ...editTarget, [e.target.name]: e.target.value })
   }
 
-  // 編集モーダル用画像選択
+  // 編集モーダル用画像選択（複数・既存と合わせて最大3枚）
   const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    setEditImageFile(file)
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => setEditImagePreview(reader.result as string)
-      reader.readAsDataURL(file)
-    } else {
-      setEditImagePreview(null)
-    }
+    if (!editTarget) return
+    const files = Array.from(e.target.files ?? [])
+    const totalCount = editTarget.image_urls.length + editImageFiles.length
+    const remaining = Math.max(0, 3 - totalCount)
+    const combined = [...editImageFiles, ...files].slice(0, editImageFiles.length + remaining)
+
+    setEditImageFiles(combined)
+
+    Promise.all(
+      combined.map((file) => new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(file)
+      }))
+    ).then(setEditImagePreviews)
   }
 
-  // 画像選択
+  // 既存画像を削除
+  const removeExistingEditImage = (index: number) => {
+    if (!editTarget) return
+    setEditTarget({
+      ...editTarget,
+      image_urls: editTarget.image_urls.filter((_, i) => i !== index),
+    })
+  }
+
+  // 新規追加画像を削除
+  const removeNewEditImage = (index: number) => {
+    setEditImageFiles((prev) => prev.filter((_, i) => i !== index))
+    setEditImagePreviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // 画像選択（複数・最大3枚まで）
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null
-    setImageFile(file)
+    const files = Array.from(e.target.files ?? [])
+    const combined = [...imageFiles, ...files].slice(0, 3) // 最大3枚
+    setImageFiles(combined)
 
-    // プレビュー用にBase64変換
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => setImagePreview(reader.result as string)
-      reader.readAsDataURL(file)
-    } else {
-      setImagePreview(null)
-    }
+    // プレビュー生成
+    Promise.all(
+      combined.map((file) => new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(file)
+      }))
+    ).then(setImagePreviews)
   }
+
+  // 画像を1枚削除
+  const removeImage = (index: number) => {
+  const newFiles = imageFiles.filter((_, i) => i !== index)
+  setImageFiles(newFiles)
+  setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+}
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
 
     try {
-      // 画像がある場合は先にR2にアップロード
-      let imageUrl: string | null = null
-      if (imageFile) {
+      // 複数画像をアップロード
+      const uploadedUrls: string[] = []
+      for (const file of imageFiles) {
         const formData = new FormData()
-        formData.append("image", imageFile)
-
+        formData.append("image", file)
         const imgRes = await fetch(`${API_URL}/api/images`, {
           method: "POST",
           headers: { Authorization: `Bearer ${getToken()}` },
           body: formData,
         })
-
         if (imgRes.ok) {
           const { url } = await imgRes.json()
-          // ローカルの相対パスを絶対URLに変換
-          imageUrl = `${API_URL}${url}`
+          uploadedUrls.push(`${API_URL}${url}`)
         }
       }
 
-      // レコードをD1に保存
       const res = await fetch(`${API_URL}/api/records`, {
         method: "POST",
         headers: {
@@ -166,7 +202,7 @@ export default function HomePage() {
         body: JSON.stringify({
           ...form,
           serial_number: form.serial_number || null,
-          image_url: imageUrl,
+          image_urls: uploadedUrls,
         }),
       })
 
@@ -178,20 +214,21 @@ export default function HomePage() {
       })
 
       if (res.ok) {
-        setForm({ category: "整備系", date: new Date().toISOString().split("T")[0], model_name: "", serial_number: "", content: "" })
-        setImageFile(null)
-        setImagePreview(null)
+        setForm({
+          category: "整備系",
+          date: new Date().toISOString().split("T")[0],
+          model_name: "",
+          serial_number: "",
+          content: "",
+        })
+        setImageFiles([])
+        setImagePreviews([])
       }
 
       setTimeout(() => setModal(null), 2000)
 
     } catch {
-      setModal({
-        show: true,
-        status: null,
-        ok: false,
-        message: "CONNECTION FAILED",
-      })
+      setModal({ show: true, status: null, ok: false, message: "CONNECTION FAILED" })
       setTimeout(() => setModal(null), 2000)
     } finally {
       setIsSaving(false)
@@ -220,61 +257,72 @@ export default function HomePage() {
   }
 
   // 更新実行
-  const handleUpdate = async () => {
-    if (!editTarget) return
-    setIsUpdating(true)
-    try {
-      // 新しい画像がある場合はR2にアップロード
-      let imageUrl = editTarget.image_url
-      if (editImageFile) {
-        const formData = new FormData()
-        formData.append("image", editImageFile)
-        const imgRes = await fetch(`${API_URL}/api/images`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${getToken()}` },
-          body: formData,
-        })
-        if (imgRes.ok) {
-          const { url } = await imgRes.json()
-          imageUrl = `${API_URL}${url}`
-        }
-      }
-
-      const res = await fetch(`${API_URL}/api/records/${editTarget.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify({
-          category: editTarget.category,
-          date: editTarget.date,
-          model_name: editTarget.model_name,
-          serial_number: editTarget.serial_number || null,
-          content: editTarget.content,
-          image_url: imageUrl,
-        }),
+const handleUpdate = async () => {
+  if (!editTarget) return
+  setIsUpdating(true)
+  try {
+    // 新しい画像をアップロード
+    const newUrls: string[] = []
+    for (const file of editImageFiles) {
+      const formData = new FormData()
+      formData.append("image", file)
+      const imgRes = await fetch(`${API_URL}/api/images`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: formData,
       })
-
-      if (res.ok) {
-        setResults((prev) =>
-          prev.map((r) =>
-            r.id === editTarget.id
-              ? { ...r, ...editTarget, serial_number: editTarget.serial_number || null, image_url: imageUrl }
-              : r
-          )
-        )
-        // 画像stateをリセット
-        setEditImageFile(null)
-        setEditImagePreview(null)
-        setEditTarget(null)
+      if (imgRes.ok) {
+        const { url } = await imgRes.json()
+        newUrls.push(`${API_URL}${url}`)
       }
-    } catch {
-      // エラーは無視
-    } finally {
-      setIsUpdating(false)
     }
+
+    // 既存画像 + 新規画像（最大3枚）
+    const allUrls = [...editTarget.image_urls, ...newUrls].slice(0, 3)
+
+    const res = await fetch(`${API_URL}/api/records/${editTarget.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify({
+        category: editTarget.category,
+        date: editTarget.date,
+        model_name: editTarget.model_name,
+        serial_number: editTarget.serial_number || null,
+        content: editTarget.content,
+        image_urls: allUrls,
+      }),
+    })
+
+    if (res.ok) {
+      const imageUrlJson = allUrls.length > 0 ? JSON.stringify(allUrls) : null
+      setResults((prev) =>
+        prev.map((r) =>
+          r.id === editTarget.id
+            ? {
+                ...r,
+                category: editTarget.category,
+                date: editTarget.date,
+                model_name: editTarget.model_name,
+                serial_number: editTarget.serial_number || null,
+                content: editTarget.content,
+                image_url: imageUrlJson,
+              }
+            : r
+        )
+      )
+      setEditImageFiles([])
+      setEditImagePreviews([])
+      setEditTarget(null)
+    }
+  } catch {
+    // エラーは無視
+  } finally {
+    setIsUpdating(false)
   }
+}
 
   return (
     <div className={styles.page}>
@@ -386,47 +434,55 @@ export default function HomePage() {
                 rows={6}
                 className={styles.textarea}
               />
-              {/* 画像アップロード */}
+              {/* 画像（最大3枚） */}
               <div className={styles.imageUpload}>
-                {/* 既存画像の表示 */}
-                {editTarget.image_url && !editImagePreview && (
-                  <div className={styles.imagePreview}>
-                    <img src={editTarget.image_url} alt="現在の画像" className={styles.previewImg} />
-                    <button
-                      type="button"
-                      onClick={() => setEditTarget({ ...editTarget, image_url: null })}
-                      className={styles.imageRemove}
-                    >
-                      [ REMOVE ]
-                    </button>
+                {/* 既存画像 + 新規プレビューを一覧表示 */}
+                {(editTarget.image_urls.length > 0 || editImagePreviews.length > 0) && (
+                  <div className={styles.imagePreviewGrid}>
+                    {editTarget.image_urls.map((url, i) => (
+                      <div key={`existing-${i}`} className={styles.imagePreviewItem}>
+                        <img src={url} alt={`既存画像${i + 1}`} className={styles.previewImg} />
+                        <button
+                          type="button"
+                          onClick={() => removeExistingEditImage(i)}
+                          className={styles.imageRemove}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    {editImagePreviews.map((src, i) => (
+                      <div key={`new-${i}`} className={styles.imagePreviewItem}>
+                        <img src={src} alt={`新規画像${i + 1}`} className={styles.previewImg} />
+                        <button
+                          type="button"
+                          onClick={() => removeNewEditImage(i)}
+                          className={styles.imageRemove}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
-                {/* 新しい画像のプレビュー */}
-                {editImagePreview && (
-                  <div className={styles.imagePreview}>
-                    <img src={editImagePreview} alt="新しい画像" className={styles.previewImg} />
-                    <button
-                      type="button"
-                      onClick={() => { setEditImageFile(null); setEditImagePreview(null) }}
-                      className={styles.imageRemove}
-                    >
-                      [ REMOVE ]
-                    </button>
-                  </div>
+
+                {/* 追加ボタン（3枚未満のとき） */}
+                {editTarget.image_urls.length + editImageFiles.length < 3 && (
+                  <label className={styles.imageLabel}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleEditImageChange}
+                      className={styles.imageInput}
+                    />
+                    <span className={styles.imageLabelText}>
+                      [ + ADD IMAGE ({editTarget.image_urls.length + editImageFiles.length}/3) ]
+                    </span>
+                  </label>
                 )}
-                {/* 画像選択ボタン */}
-                <label className={styles.imageLabel}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleEditImageChange}
-                    className={styles.imageInput}
-                  />
-                  <span className={styles.imageLabelText}>
-                    {editImageFile ? `📎 ${editImageFile.name}` : "[ + CHANGE IMAGE ]"}
-                  </span>
-                </label>
               </div>
+
               <div className={styles.deleteButtons}>
                 <button
                   onClick={handleUpdate}
@@ -522,15 +578,18 @@ export default function HomePage() {
                       <span className={styles.date}>{r.date}</span>
                     </div>
                     <p className={styles.content}>{r.content}</p>
-                    {/* 画像表示 */}
-                    {r.image_url && (
-                      <div className={styles.cardImage}>
-                        <img
-                          src={r.image_url}
-                          alt={`${r.model_name}の整備画像`}
-                          className={styles.cardImg}
-                          onClick={() => setImageModal(r.image_url!)}
-                        />
+                    {/* 画像表示（複数対応） */}
+                    {parseImages(r.image_url).length > 0 && (
+                      <div className={styles.cardImageGrid}>
+                        {parseImages(r.image_url).map((url, i) => (
+                          <img
+                            key={i}
+                            src={url}
+                            alt={`${r.model_name}の整備画像${i + 1}`}
+                            className={styles.cardImg}
+                            onClick={() => setImageModal(url)}
+                          />
+                        ))}
                       </div>
                     )}
                     <div className={styles.cardFooter}>
@@ -543,7 +602,7 @@ export default function HomePage() {
                           model_name: r.model_name,
                           serial_number: r.serial_number ?? "",
                           content: r.content,
-                          image_url: r.image_url,
+                          image_urls: parseImages(r.image_url),
                         })}
                         className={styles.editBtn}
                         title="編集"
@@ -598,31 +657,39 @@ export default function HomePage() {
               rows={5}
               className={styles.textarea}
             />
-            {/* 画像選択 */}
+            {/* 画像選択（最大3枚） */}
             <div className={styles.imageUpload}>
-              <label className={styles.imageLabel}>
-                <input
-                  type="file"
-                  accept="image/*"          // 画像ファイルのみ
-                  onChange={handleImageChange}
-                  className={styles.imageInput}
-                />
-                <span className={styles.imageLabelText}>
-                  {imageFile ? `📎 ${imageFile.name}` : "[ + ATTACH IMAGE ]"}
-                </span>
-              </label>
+              {imageFiles.length < 3 && (
+                <label className={styles.imageLabel}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageChange}
+                    className={styles.imageInput}
+                  />
+                  <span className={styles.imageLabelText}>
+                    [ + ATTACH IMAGE ({imageFiles.length}/3) ]
+                  </span>
+                </label>
+              )}
 
-              {/* プレビュー */}
-              {imagePreview && (
-                <div className={styles.imagePreview}>
-                  <img src={imagePreview} alt="preview" className={styles.previewImg} />
-                  <button
-                    type="button"
-                    onClick={() => { setImageFile(null); setImagePreview(null) }}
-                    className={styles.imageRemove}
-                  >
-                    [ REMOVE ]
-                  </button>
+
+              {/* プレビュー一覧 */}
+              {imagePreviews.length > 0 && (
+                <div className={styles.imagePreviewGrid}>
+                  {imagePreviews.map((src, i) => (
+                    <div key={i} className={styles.imagePreviewItem}>
+                      <img src={src} alt={`preview-${i}`} className={styles.previewImg} />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        className={styles.imageRemove}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
