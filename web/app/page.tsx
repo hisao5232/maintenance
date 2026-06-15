@@ -468,20 +468,36 @@ const handleUpdate = async () => {
 
                 {/* 追加ボタン（3枚未満のとき） */}
                 {editTarget.image_urls.length + editImageFiles.length < 3 && (
-                  <label className={styles.imageLabel}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleEditImageChange}
-                      className={styles.imageInput}
-                    />
-                    <span className={styles.imageLabelText}>
-                      [ + ADD IMAGE ({editTarget.image_urls.length + editImageFiles.length}/3) ]
-                    </span>
-                  </label>
+                  <div className={styles.imageButtonRow}>
+                    {/* カメラで撮影 */}
+                    <label className={styles.imageLabel}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleEditImageChange}
+                        className={styles.imageInput}
+                      />
+                      <span className={styles.imageLabelText}>
+                        [ 📷 CAMERA ]
+                      </span>
+                    </label>
+
+                    {/* ギャラリーから選択 */}
+                    <label className={styles.imageLabel}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleEditImageChange}
+                        className={styles.imageInput}
+                      />
+                      <span className={styles.imageLabelText}>
+                        [ 🖼 GALLERY ({editTarget.image_urls.length + editImageFiles.length}/3) ]
+                      </span>
+                    </label>
+                  </div>
                 )}
-              </div>
 
               <div className={styles.deleteButtons}>
                 <button
@@ -500,6 +516,7 @@ const handleUpdate = async () => {
               </div>
             </div>
           </div>
+        </div>
         </div>
       )}
 
@@ -657,23 +674,40 @@ const handleUpdate = async () => {
               rows={5}
               className={styles.textarea}
             />
+
             {/* 画像選択（最大3枚） */}
             <div className={styles.imageUpload}>
               {imageFiles.length < 3 && (
-                <label className={styles.imageLabel}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageChange}
-                    className={styles.imageInput}
-                  />
-                  <span className={styles.imageLabelText}>
-                    [ + ATTACH IMAGE ({imageFiles.length}/3) ]
-                  </span>
-                </label>
-              )}
+                <div className={styles.imageButtonRow}>
+                  {/* カメラで撮影 */}
+                  <label className={styles.imageLabel}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleImageChange}
+                      className={styles.imageInput}
+                    />
+                    <span className={styles.imageLabelText}>
+                      [ 📷 CAMERA ]
+                    </span>
+                  </label>
 
+                  {/* ギャラリーから選択 */}
+                  <label className={styles.imageLabel}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className={styles.imageInput}
+                    />
+                    <span className={styles.imageLabelText}>
+                      [ 🖼 GALLERY ({imageFiles.length}/3) ]
+                    </span>
+                  </label>
+                </div>
+              )}
 
               {/* プレビュー一覧 */}
               {imagePreviews.length > 0 && (
@@ -693,6 +727,7 @@ const handleUpdate = async () => {
                 </div>
               )}
             </div>
+
             <div className={styles.formFooter}>
               <button type="submit" disabled={isSaving} className={styles.btnPrimary}>
                 {isSaving ? "SAVING..." : "[ SAVE RECORD ]"}

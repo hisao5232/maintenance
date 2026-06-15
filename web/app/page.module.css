@@ -658,3 +658,16 @@
   height: 120px;
   object-fit: cover;
 }
+
+/* 画像選択ボタンの横並び */
+.imageButtonRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.imageButtonRow .imageLabelText {
+  flex: 1;
+  text-align: center;
+  min-width: 120px;
+}
