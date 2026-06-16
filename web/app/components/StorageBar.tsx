@@ -18,7 +18,6 @@ type StorageInfo = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-// バイトを読みやすい単位に変換
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
@@ -26,13 +25,13 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)}GB`
 }
 
-// 使用率を計算（最大100%）
 function calcPercent(used: number, limit: number): number {
   return Math.min((used / limit) * 100, 100)
 }
 
 export default function StorageBar() {
   const [storage, setStorage] = useState<StorageInfo | null>(null)
+  const [loading, setLoading] = useState(true)  // ローディング状態を追加
 
   useEffect(() => {
     const token = document.cookie
@@ -40,15 +39,32 @@ export default function StorageBar() {
       .find((r) => r.startsWith("token="))
       ?.split("=")[1]
 
-    if (!token) return
+    if (!token) {
+      setLoading(false)
+      return
+    }
 
     fetch(`${API_URL}/api/storage`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
-      .then(setStorage)
-      .catch(() => {})
+      .then((data) => {
+        setStorage(data)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
   }, [])
+
+  // ローディング中はプレースホルダーを表示
+  if (loading) return (
+    <div className={styles.container}>
+      <div className={styles.inner}>
+        <span className={styles.loadingText}>
+          // LOADING STORAGE INFO...
+        </span>
+      </div>
+    </div>
+  )
 
   if (!storage) return null
 

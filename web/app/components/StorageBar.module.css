@@ -55,3 +55,9 @@
 .barFill[data-warning="true"] {
   background: var(--danger);
 }
+
+.loadingText {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
