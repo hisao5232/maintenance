@@ -671,3 +671,15 @@
   text-align: center;
   min-width: 120px;
 }
+
+.badgeAdmin {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+}
+
+.badgeGuest {
+  background: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
+  border: 1px solid #a855f7;
+}

@@ -8,9 +8,15 @@ type Bindings = {
   PASSWORD: string   // 環境変数
   JWT_SECRET: string // 環境変数
   IMAGES: R2Bucket // 画像保存用R2バケット
+  GUEST_USERNAME: string
+  GUEST_PASSWORD: string
 }
 
-const app = new Hono<{ Bindings: Bindings }>()
+type Variables = {
+  role: string
+}
+
+const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 app.use("*", cors({
   origin: "*",
@@ -28,7 +34,8 @@ const authMiddleware = async (c: any, next: any) => {
   }
   const token = authHeader.replace("Bearer ", "")
   try {
-    await verify(token, c.env.JWT_SECRET, "HS256")
+    const payload = await verify(token, c.env.JWT_SECRET, "HS256")
+    c.set("role", payload.role)  // roleをcontextに保存
     await next()
   } catch {
     return c.json({ error: "トークンが無効です" }, 401)
@@ -36,26 +43,45 @@ const authMiddleware = async (c: any, next: any) => {
 }
 
 // --- ログイン ---
-// POST /auth/login
 app.post("/auth/login", async (c) => {
   const { username, password } = await c.req.json<{
     username: string
     password: string
   }>()
 
-  // 環境変数と照合
-  if (username !== c.env.USERNAME || password !== c.env.PASSWORD) {
+  let role: "admin" | "guest" | null = null
+
+  if (username === c.env.USERNAME && password === c.env.PASSWORD) {
+    role = "admin"
+  } else if (username === c.env.GUEST_USERNAME && password === c.env.GUEST_PASSWORD) {
+    role = "guest"
+  }
+
+  if (!role) {
     return c.json({ error: "IDまたはパスワードが違います" }, 401)
   }
 
-  // JWTトークン発行（24時間有効）
+  // roleをJWTに含める
   const token = await sign(
-    { sub: username, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 },
+    {
+      sub: username,
+      role,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
+    },
     c.env.JWT_SECRET,
     "HS256"
   )
 
-  return c.json({ token })
+  // ゲストのログインログを記録
+  if (role === "guest") {
+    const ip = c.req.header("CF-Connecting-IP") ?? "unknown"
+    await c.env.DB
+      .prepare("INSERT INTO guest_logs (action, detail, ip) VALUES (?, ?, ?)")
+      .bind("login", username, ip)
+      .run()
+  }
+
+  return c.json({ token, role })
 })
 
 // 以下のルートは認証が必要
@@ -65,7 +91,7 @@ app.use("/api/images", authMiddleware)    // アップロードは認証必要
 // --- 全件取得 ---
 app.get("/api/records", async (c) => {
   const { results } = await c.env.DB
-    .prepare("SELECT id, category, date, model_name, serial_number, content, image_url FROM maintenance_records ORDER BY date DESC")
+    .prepare("SELECT id, category, date, model_name, serial_number, content, image_url, created_by FROM maintenance_records ORDER BY date DESC")
     .all()
   return c.json(results)
 })
@@ -74,14 +100,22 @@ app.get("/api/records", async (c) => {
 app.get("/api/records/search", async (c) => {
   const q        = c.req.query("q") ?? ""
   const category = c.req.query("category") ?? ""
+  const role     = c.get("role") as string ?? "admin"
 
-  // スペースで分割して複数キーワードに（全角・半角スペース対応）
+  // ゲストの検索ログを記録（キーワードがある場合のみ）
+  if (role === "guest" && q) {
+    const ip = c.req.header("CF-Connecting-IP") ?? "unknown"
+    await c.env.DB
+      .prepare("INSERT INTO guest_logs (action, detail, ip) VALUES (?, ?, ?)")
+      .bind("search", q, ip)
+      .run()
+  }
+
   const keywords = q.trim().split(/[\s　]+/).filter(Boolean)
 
-  let sql = "SELECT id, category, date, model_name, serial_number, content, image_url FROM maintenance_records WHERE 1=1"
+  let sql = "SELECT id, category, date, model_name, serial_number, content, image_url, created_by FROM maintenance_records WHERE 1=1"
   let params: string[] = []
 
-  // キーワードごとにAND条件を追加
   for (const keyword of keywords) {
     sql += " AND (model_name LIKE ? OR serial_number LIKE ? OR content LIKE ?)"
     params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
@@ -112,21 +146,34 @@ app.get("/api/records/:id", async (c) => {
 app.post("/api/records", async (c) => {
   const body = await c.req.json<{
     category: string; date: string; model_name: string
-    serial_number?: string; content: string; image_urls?: string[]  // 配列に変更
+    serial_number?: string; content: string; image_urls?: string[]
   }>()
   if (!body.category || !body.date || !body.model_name || !body.content) {
     return c.json({ error: "必須項目が不足しています" }, 400)
   }
 
-  // 配列をJSON文字列にして保存（空配列ならnull）
   const imageUrlJson = body.image_urls && body.image_urls.length > 0
     ? JSON.stringify(body.image_urls)
     : null
 
+  // roleからcreated_byを決定
+  const role = c.get("role") as string ?? "admin"
+  const created_by = role === "guest" ? "guest" : "admin"
+
   await c.env.DB
-    .prepare("INSERT INTO maintenance_records (category, date, model_name, serial_number, content, image_url) VALUES (?, ?, ?, ?, ?, ?)")
-    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content, imageUrlJson)
+    .prepare("INSERT INTO maintenance_records (category, date, model_name, serial_number, content, image_url, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .bind(body.category, body.date, body.model_name, body.serial_number ?? null, body.content, imageUrlJson, created_by)
     .run()
+
+  // ゲストの登録ログを記録
+  if (role === "guest") {
+    const ip = c.req.header("CF-Connecting-IP") ?? "unknown"
+    await c.env.DB
+      .prepare("INSERT INTO guest_logs (action, detail, ip) VALUES (?, ?, ?)")
+      .bind("create", `${body.model_name} / ${body.date}`, ip)
+      .run()
+  }
+
   return c.json({ success: true }, 201)
 })
 
@@ -249,6 +296,18 @@ app.get("/api/storage", async (c) => {
       object_count: r2List.objects.length,
     },
   })
+})
+
+// --- ゲストログ閲覧（adminのみ） ---
+app.get("/api/guest-logs", async (c) => {
+  const role = c.get("role") as string
+  if (role !== "admin") {
+    return c.json({ error: "権限がありません" }, 403)
+  }
+  const { results } = await c.env.DB
+    .prepare("SELECT * FROM guest_logs ORDER BY created_at DESC LIMIT 100")
+    .all()
+  return c.json(results)
 })
 
 export default app

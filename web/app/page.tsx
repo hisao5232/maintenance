@@ -12,6 +12,7 @@ type Record = {
   serial_number: string | null
   content: string
   image_url: string | null
+  created_by: string | null
 }
 
 // JSON文字列を配列に変換するヘルパー
@@ -35,7 +36,19 @@ export default function HomePage() {
       .split("; ")
       .find((row) => row.startsWith("token="))
       ?.split("=")[1]
-    if (!token) router.replace("/login")
+
+    if (!token) {
+      router.replace("/login")
+      return
+    }
+
+    // JWTのペイロードからroleを取得（Base64デコード）
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]))
+      setRole(payload.role ?? "admin")
+    } catch {
+      setRole("admin")
+    }
   }, [router])
 
   const [query, setQuery]       = useState("")
@@ -324,6 +337,9 @@ const handleUpdate = async () => {
   }
 }
 
+// ユーザーのrole
+const [role, setRole] = useState<"admin" | "guest" | null>(null)
+
   return (
     <div className={styles.page}>
 
@@ -592,6 +608,10 @@ const handleUpdate = async () => {
                       {r.serial_number && (
                         <span className={styles.serial}>SN: {r.serial_number}</span>
                       )}
+                      {/* 登録者バッジ */}
+                      <span className={`${styles.badge} ${r.created_by === "guest" ? styles.badgeGuest : styles.badgeAdmin}`}>
+                        {r.created_by === "guest" ? "GUEST" : "ADMIN"}
+                      </span>
                       <span className={styles.date}>{r.date}</span>
                     </div>
                     <p className={styles.content}>{r.content}</p>
@@ -609,32 +629,33 @@ const handleUpdate = async () => {
                         ))}
                       </div>
                     )}
-                    <div className={styles.cardFooter}>
-                      {/* 編集ボタン */}
-                      <button
-                        onClick={() => setEditTarget({
-                          id: r.id,
-                          category: r.category,
-                          date: r.date,
-                          model_name: r.model_name,
-                          serial_number: r.serial_number ?? "",
-                          content: r.content,
-                          image_urls: parseImages(r.image_url),
-                        })}
-                        className={styles.editBtn}
-                        title="編集"
-                      >
-                        ✏️
-                      </button>
-                      {/* 削除ボタン */}
-                      <button
-                        onClick={() => setDeleteTarget({ id: r.id, model_name: r.model_name })}
-                        className={styles.deleteBtn}
-                        title="削除"
-                      >
-                        🗑
-                      </button>
-                    </div>
+                    {/* 編集・削除ボタン（adminのみ） */}
+                    {role === "admin" && (
+                      <div className={styles.cardFooter}>
+                        <button
+                          onClick={() => setEditTarget({
+                            id: r.id,
+                            category: r.category,
+                            date: r.date,
+                            model_name: r.model_name,
+                            serial_number: r.serial_number ?? "",
+                            content: r.content,
+                            image_urls: parseImages(r.image_url),
+                          })}
+                          className={styles.editBtn}
+                          title="編集"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget({ id: r.id, model_name: r.model_name })}
+                          className={styles.deleteBtn}
+                          title="削除"
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </>
