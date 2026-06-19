@@ -683,3 +683,18 @@
   color: #a855f7;
   border: 1px solid #a855f7;
 }
+
+.approveBtn {
+  background: transparent;
+  border: 1px solid var(--success);
+  color: var(--success);
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.approveBtn:hover {
+  background: rgba(34, 197, 94, 0.1);
+}

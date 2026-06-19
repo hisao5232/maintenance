@@ -269,6 +269,23 @@ export default function HomePage() {
     }
   }
 
+  // ゲストレコードをadminに変更
+  const handleApprove = async (id: number) => {
+    try {
+      const res = await fetch(`${API_URL}/api/records/${id}/approve`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
+      if (res.ok) {
+        setResults((prev) =>
+          prev.map((r) => r.id === id ? { ...r, created_by: "admin" } : r)
+        )
+      }
+    } catch {
+      // エラーは無視
+    }
+  }
+
   // 更新実行
 const handleUpdate = async () => {
   if (!editTarget) return
@@ -731,6 +748,16 @@ const [role, setRole] = useState<"admin" | "guest" | null>(null)
                     {/* 編集・削除ボタン（adminのみ） */}
                     {role === "admin" && (
                       <div className={styles.cardFooter}>
+                        {/* ゲストレコードの場合は承認ボタンを表示 */}
+                        {r.created_by === "guest" && (
+                          <button
+                            onClick={() => handleApprove(r.id)}
+                            className={styles.approveBtn}
+                            title="ADMINに変更"
+                          >
+                            ✅
+                          </button>
+                        )}
                         <button
                           onClick={() => setEditTarget({
                             id: r.id,

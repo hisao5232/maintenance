@@ -62,7 +62,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 app.use("*", cors({
   origin: "*",
   allowHeaders: ["Content-Type", "Authorization"],
-  allowMethods: ["GET", "POST", "PUT", "DELETE"],
+  allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
 }))
 
@@ -263,6 +263,22 @@ app.delete("/api/records/:id", async (c) => {
   await c.env.DB
     .prepare("DELETE FROM maintenance_records WHERE id = ?")
     .bind(id).run()
+  return c.json({ success: true })
+})
+
+// --- 登録者をadminに変更（adminのみ） ---
+app.patch("/api/records/:id/approve", async (c) => {
+  const role = c.get("role") as string
+  if (role !== "admin") {
+    return c.json({ error: "権限がありません" }, 403)
+  }
+
+  const id = c.req.param("id")
+  await c.env.DB
+    .prepare("UPDATE maintenance_records SET created_by = 'admin' WHERE id = ?")
+    .bind(id)
+    .run()
+
   return c.json({ success: true })
 })
 
