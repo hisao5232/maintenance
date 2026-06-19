@@ -10,10 +10,51 @@ type Bindings = {
   IMAGES: R2Bucket // 画像保存用R2バケット
   GUEST_USERNAME: string
   GUEST_PASSWORD: string
+  DISCORD_WEBHOOK_URL: string
 }
 
 type Variables = {
   role: string
+}
+
+// Discord通知を送る関数
+async function notifyDiscord(webhookUrl: string, record: {
+  model_name: string
+  date: string
+  category: string
+  serial_number?: string | null
+  content: string
+}) {
+  const message = {
+    embeds: [
+      {
+        title: "🔧 ゲストが整備記録を登録しました",
+        color: 0xf59e0b,
+        fields: [
+          { name: "機種名", value: record.model_name, inline: true },
+          { name: "カテゴリ", value: record.category, inline: true },
+          { name: "日付", value: record.date, inline: true },
+          ...(record.serial_number ? [{ name: "シリアル番号", value: record.serial_number, inline: true }] : []),
+          { name: "内容", value: record.content.slice(0, 500) },
+        ],
+        timestamp: new Date().toISOString(),
+        footer: { text: "Heavy Equipment Service Log" },
+      },
+    ],
+  }
+
+  const res = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(message),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    console.error(`Discord通知失敗: ${res.status} ${text}`)
+  } else {
+    console.log("Discord通知成功")
+  }
 }
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -35,7 +76,7 @@ const authMiddleware = async (c: any, next: any) => {
   const token = authHeader.replace("Bearer ", "")
   try {
     const payload = await verify(token, c.env.JWT_SECRET, "HS256")
-    c.set("role", payload.role)  // roleをcontextに保存
+    c.set("role", payload.role)
     await next()
   } catch {
     return c.json({ error: "トークンが無効です" }, 401)
@@ -85,8 +126,17 @@ app.post("/auth/login", async (c) => {
 })
 
 // 以下のルートは認証が必要
-app.use("/api/records*", authMiddleware)  // レコードのみ認証必要
-app.use("/api/images", authMiddleware)    // アップロードは認証必要
+app.get("/api/images/:key", async (c) => {
+  const key = c.req.param("key")
+  const obj = await c.env.IMAGES.get(key)
+  if (!obj) return c.json({ error: "画像が見つかりません" }, 404)
+  const headers = new Headers()
+  headers.set("Content-Type", obj.httpMetadata?.contentType ?? "image/jpeg")
+  headers.set("Cache-Control", "public, max-age=31536000")
+  return new Response(obj.body, { headers })
+})
+
+app.use("/api/*", authMiddleware)
 
 // --- 全件取得 ---
 app.get("/api/records", async (c) => {
@@ -174,6 +224,17 @@ app.post("/api/records", async (c) => {
       .run()
   }
 
+  // ゲストが登録した場合はDiscordに通知
+  if (created_by === "guest") {
+    await notifyDiscord(c.env.DISCORD_WEBHOOK_URL, {
+      model_name: body.model_name,
+      date: body.date,
+      category: body.category,
+      serial_number: body.serial_number,
+      content: body.content,
+    }).catch((e) => console.error("Discord通知エラー:", e))
+  }
+  
   return c.json({ success: true }, 201)
 })
 
@@ -238,22 +299,6 @@ app.post("/api/images", async (c) => {
   // 公開URLを返す（Workers経由で配信）
   const url = `/api/images/${key}`
   return c.json({ url }, 201)
-})
-
-// --- 画像取得 ---
-// GET /api/images/:key
-app.get("/api/images/:key", async (c) => {
-  const key = c.req.param("key")
-  const obj = await c.env.IMAGES.get(key)
-
-  if (!obj) return c.json({ error: "画像が見つかりません" }, 404)
-
-  // 画像をそのまま返す
-  const headers = new Headers()
-  headers.set("Content-Type", obj.httpMetadata?.contentType ?? "image/jpeg")
-  headers.set("Cache-Control", "public, max-age=31536000") // 1年キャッシュ
-
-  return new Response(obj.body, { headers })
 })
 
 // --- 画像削除 ---
