@@ -556,6 +556,105 @@ const [role, setRole] = useState<"admin" | "guest" | null>(null)
         </div>
       )}
 
+      {/* 登録セクション */}
+      <section className={styles.section}>
+        <button
+          className={styles.toggleBtn}
+          onClick={() => setShowForm(!showForm)}
+        >
+          {showForm ? "▼" : "▶"} // NEW RECORD ENTRY
+        </button>
+
+        {showForm && (
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.formRow}>
+              <select name="category" value={form.category} onChange={handleFormChange} className={styles.select}>
+                <option value="整備系">整備系</option>
+                <option value="マニュアル系">マニュアル系</option>
+              </select>
+              <input name="date" type="date" value={form.date} onChange={handleFormChange} required className={styles.input} />
+            </div>
+            <div className={styles.formRow}>
+              <input name="model_name" type="text" value={form.model_name} onChange={handleFormChange} required placeholder="MODEL NAME" className={styles.input} />
+              <input name="serial_number" type="text" value={form.serial_number} onChange={handleFormChange} placeholder="SERIAL NO. (OPTIONAL)" className={styles.input} />
+            </div>
+            <textarea
+              name="content"
+              value={form.content}
+              onChange={handleFormChange}
+              required
+              placeholder="// ENTER SERVICE DETAILS..."
+              rows={5}
+              className={styles.textarea}
+            />
+
+            {/* 画像選択（最大3枚） */}
+            <div className={styles.imageUpload}>
+              {imageFiles.length < 3 && (
+                <div className={styles.imageButtonRow}>
+                  {/* カメラで撮影 */}
+                  <label className={styles.imageLabel}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleImageChange}
+                      className={styles.imageInput}
+                    />
+                    <span className={styles.imageLabelText}>
+                      [ 📷 CAMERA ]
+                    </span>
+                  </label>
+
+                  {/* ギャラリーから選択 */}
+                  <label className={styles.imageLabel}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className={styles.imageInput}
+                    />
+                    <span className={styles.imageLabelText}>
+                      [ 🖼 GALLERY ({imageFiles.length}/3) ]
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              {/* プレビュー一覧 */}
+              {imagePreviews.length > 0 && (
+                <div className={styles.imagePreviewGrid}>
+                  {imagePreviews.map((src, i) => (
+                    <div key={i} className={styles.imagePreviewItem}>
+                      <img src={src} alt={`preview-${i}`} className={styles.previewImg} />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        className={styles.imageRemove}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className={styles.formFooter}>
+              <button type="submit" disabled={isSaving} className={styles.btnPrimary}>
+                {isSaving ? "SAVING..." : "[ SAVE RECORD ]"}
+              </button>
+              {saveMessage && (
+                <span className={saveMessage.includes("ERROR") ? styles.msgError : styles.msgSuccess}>
+                  {saveMessage}
+                </span>
+              )}
+            </div>
+          </form>
+        )}
+      </section>
+
       {/* 検索セクション */}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
@@ -663,106 +762,6 @@ const [role, setRole] = useState<"admin" | "guest" | null>(null)
           </div>
         )}
       </section>
-
-      {/* 登録セクション */}
-      <section className={styles.section}>
-        <button
-          className={styles.toggleBtn}
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? "▼" : "▶"} // NEW RECORD ENTRY
-        </button>
-
-        {showForm && (
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <div className={styles.formRow}>
-              <select name="category" value={form.category} onChange={handleFormChange} className={styles.select}>
-                <option value="整備系">整備系</option>
-                <option value="マニュアル系">マニュアル系</option>
-              </select>
-              <input name="date" type="date" value={form.date} onChange={handleFormChange} required className={styles.input} />
-            </div>
-            <div className={styles.formRow}>
-              <input name="model_name" type="text" value={form.model_name} onChange={handleFormChange} required placeholder="MODEL NAME" className={styles.input} />
-              <input name="serial_number" type="text" value={form.serial_number} onChange={handleFormChange} placeholder="SERIAL NO. (OPTIONAL)" className={styles.input} />
-            </div>
-            <textarea
-              name="content"
-              value={form.content}
-              onChange={handleFormChange}
-              required
-              placeholder="// ENTER SERVICE DETAILS..."
-              rows={5}
-              className={styles.textarea}
-            />
-
-            {/* 画像選択（最大3枚） */}
-            <div className={styles.imageUpload}>
-              {imageFiles.length < 3 && (
-                <div className={styles.imageButtonRow}>
-                  {/* カメラで撮影 */}
-                  <label className={styles.imageLabel}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handleImageChange}
-                      className={styles.imageInput}
-                    />
-                    <span className={styles.imageLabelText}>
-                      [ 📷 CAMERA ]
-                    </span>
-                  </label>
-
-                  {/* ギャラリーから選択 */}
-                  <label className={styles.imageLabel}>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageChange}
-                      className={styles.imageInput}
-                    />
-                    <span className={styles.imageLabelText}>
-                      [ 🖼 GALLERY ({imageFiles.length}/3) ]
-                    </span>
-                  </label>
-                </div>
-              )}
-
-              {/* プレビュー一覧 */}
-              {imagePreviews.length > 0 && (
-                <div className={styles.imagePreviewGrid}>
-                  {imagePreviews.map((src, i) => (
-                    <div key={i} className={styles.imagePreviewItem}>
-                      <img src={src} alt={`preview-${i}`} className={styles.previewImg} />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(i)}
-                        className={styles.imageRemove}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className={styles.formFooter}>
-              <button type="submit" disabled={isSaving} className={styles.btnPrimary}>
-                {isSaving ? "SAVING..." : "[ SAVE RECORD ]"}
-              </button>
-              {saveMessage && (
-                <span className={saveMessage.includes("ERROR") ? styles.msgError : styles.msgSuccess}>
-                  {saveMessage}
-                </span>
-              )}
-            </div>
-          </form>
-        )}
-      </section>
-
     </div>
   )
 }
