@@ -1,10 +1,13 @@
-// Header.tsx
 "use client"
 
 import styles from "./Header.module.css"
 import { useRouter } from "next/navigation"
 
-export default function Header() {
+type Props = {
+  role?: "admin" | "guest" | null
+}
+
+export default function Header({ role }: Props) {
   const router = useRouter()
 
   const handleLogout = () => {
@@ -16,7 +19,6 @@ export default function Header() {
     <header className={styles.header}>
       <div className={styles.inner}>
         <div className={styles.left}>
-          {/* 重機カラーの警告ストライプアイコン */}
           <div className={styles.icon} />
           <div className={styles.titleBlock}>
             <span className={styles.title}>Heavy Equipment Service Log</span>
@@ -25,7 +27,12 @@ export default function Header() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          {/* システム稼働中ステータス */}
+          {/* roleバッジ */}
+          {role && (
+            <span className={`${styles.roleBadge} ${role === "guest" ? styles.roleGuest : styles.roleAdmin}`}>
+              {role === "guest" ? "GUEST" : "ADMIN"}
+            </span>
+          )}
           <div className={styles.status}>
             <div className={styles.dot} />
             <span>SYSTEM ONLINE</span>

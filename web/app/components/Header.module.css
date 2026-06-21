@@ -123,3 +123,23 @@
     letter-spacing: 0.05em;
   }
 }
+
+.roleBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.roleAdmin {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+}
+
+.roleGuest {
+  background: rgba(168, 85, 247, 0.15);
+  color: #a855f7;
+  border: 1px solid #a855f7;
+}

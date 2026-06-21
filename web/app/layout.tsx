@@ -36,8 +36,6 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
-        <Header />
-        <StorageBar />
         <main style={{ flex: 1 }}>
           {children}
         </main>

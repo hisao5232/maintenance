@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import styles from "./page.module.css"
+import Header from "./components/Header"
+import StorageBar from "./components/StorageBar"
 
 type Record = {
   id: number
@@ -358,6 +360,9 @@ const handleUpdate = async () => {
 const [role, setRole] = useState<"admin" | "guest" | null>(null)
 
   return (
+      <>
+    <Header role={role} />
+    <StorageBar />
     <div className={styles.page}>
 
       {/* モーダル */}
@@ -790,5 +795,6 @@ const [role, setRole] = useState<"admin" | "guest" | null>(null)
         )}
       </section>
     </div>
+    </>
   )
 }
